@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic'; // Ensure this route is dynamic
+export const revalidate = 0; // Prevent static generation
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
