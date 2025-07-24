@@ -94,3 +94,8 @@ If you encounter any issues during deployment:
 7. If environment variables aren't being recognized:
    - Double-check that they're correctly set in the Netlify dashboard
    - Ensure they're named exactly as required by the application
+8. If you see a "Page not found" error after successful deployment:
+   - Check that the publish directory in the Netlify UI matches the one in netlify.toml
+   - The publish directory should be `.next` (relative to the base directory), not `avi_s_application/.next`
+   - If the Netlify UI shows `avi_s_application/.next`, change it to just `.next` since the base directory is already set to `avi_s_application`
+   - Redeploy the site after making these changes
