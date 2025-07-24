@@ -2,10 +2,137 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../../components/common/Header';
 import Button from '../../components/ui/Button';
+import { supabase } from '@/lib/supabase';
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState('');
-  const [selectedCamera, setSelectedCamera] = useState('Camera - 01');
+  const [selectedCamera, setSelectedCamera] = useState('');
   const [playbackSpeed, setPlaybackSpeed] = useState('1x');
+  // State for incidents with default empty array
+  const [incidents, setIncidents] = useState([]);
+  // State for cameras and timeline data
+  const [cameras, setCameras] = useState([]);
+  const [timelineMarkers, setTimelineMarkers] = useState([]);
+  const [timelineEvents, setTimelineEvents] = useState([]);
+
+  // Function to fetch incidents from the API
+  const fetchIncidents = async () => {
+    try {
+      const response = await fetch('/api/incidents');
+      if (!response.ok) throw new Error('Failed to fetch incidents');
+      const data = await response.json();
+      setIncidents(data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching incidents:', error);
+      return [];
+    }
+  };
+
+  // Function to fetch cameras from the API
+  const fetchCameras = async () => {
+    try {
+      const response = await fetch('/api/cameras');
+      if (!response.ok) throw new Error('Failed to fetch cameras');
+      const data = await response.json();
+      setCameras(data);
+      
+      // Set the first camera as selected by default
+      if (data.length > 0 && !selectedCamera) {
+        setSelectedCamera(data[0].id);
+      }
+      return data;
+    } catch (error) {
+      console.error('Error fetching cameras:', error);
+      return [];
+    }
+  };
+
+  // Function to fetch timeline data from the API
+  const fetchTimelineData = async () => {
+    try {
+      const response = await fetch('/api/timeline');
+      if (!response.ok) throw new Error('Failed to fetch timeline data');
+      const { markers, events } = await response.json();
+      setTimelineMarkers(markers);
+      setTimelineEvents(events);
+      return { markers, events };
+    } catch (error) {
+      console.error('Error fetching timeline data:', error);
+      return { markers: [], events: [] };
+    }
+  };
+
+  // Set up real-time subscription with reconnection
+  const setupRealtimeSubscription = () => {
+    console.log('🔔 Setting up real-time subscription for incidents...');
+    
+    // Clean up any existing subscription
+    const existingChannel = supabase.channel('incidents_changes');
+    if (existingChannel) {
+      supabase.removeChannel(existingChannel);
+    }
+
+    // Simplified subscription
+    const subscription = supabase
+      .channel('incidents_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'incidents'
+        },
+        (payload) => {
+          console.log('🔔 Realtime change received:', payload);
+          // Refresh data when changes are detected
+          fetchIncidents().then(() => fetchTimelineData());
+        }
+      )
+      .subscribe();
+
+    // Handle subscription status
+    const status = subscription.subscribe((status, err) => {
+      console.log('🔔 Subscription status:', status);
+      if (err) {
+        console.error('❌ Subscription error:', err);
+        // Attempt to resubscribe on error
+        setTimeout(setupRealtimeSubscription, 1000);
+      }
+    });
+
+    return () => {
+      console.log('🧹 Cleaning up subscription');
+      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
+    };
+  };
+
+  // Initial data fetch and subscription setup
+  useEffect(() => {
+    // Initial data load
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          fetchIncidents(),
+          fetchCameras(),
+          fetchTimelineData()
+        ]);
+        
+        // Set up real-time after initial load
+        const cleanup = setupRealtimeSubscription();
+        
+        // Cleanup function
+        return () => {
+          if (cleanup) cleanup();
+        };
+      } catch (error) {
+        console.error('Error during initial data load:', error);
+      }
+    };
+
+    loadData();
+  }, []); // Empty dependency array means this runs once on mount
+
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -23,74 +150,61 @@ const Dashboard = () => {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
-  const incidents = [
-    {
-      id: 1,
-      type: 'Unauthorised Access',
-      icon: '/images/img_bxs_door_open.svg',
-      camera: 'Shop Floor Camera A',
-      time: '14:35 - 14:37 on 7-Jul-2025',
-      image: '/images/img_screenshot_2025_07_10_1.png',
-      color: 'text-global-7',
-      bgColor: 'bg-global-6'
-    },
-    {
-      id: 2,
-      type: 'Gun Threat',
-      icon: '/images/img_mdi_gun.svg',
-      camera: 'Shop Floor Camera A',
-      time: '14:35 - 14:37 on 7-Jul-2025',
-      image: '/images/img_screenshot_2025_07_10_1.png',
-      color: 'text-button-3',
-      bgColor: 'bg-global-7'
-    },
-    {
-      id: 3,
-      type: 'Unauthorised Access',
-      icon: '/images/img_bxs_door_open.svg',
-      camera: 'Shop Floor Camera A',
-      time: '14:35 - 14:37 on 7-Jul-2025',
-      image: '/images/img_screenshot_2025_07_10_3.png',
-      color: 'text-global-7',
-      bgColor: 'bg-global-6'
-    },
-    {
-      id: 4,
-      type: 'Unauthorised Access',
-      icon: '/images/img_bxs_door_open.svg',
-      camera: 'Shop Floor Camera A',
-      time: '14:35 - 14:37 on 7-Jul-2025',
-      image: '/images/img_screenshot_2025_07_10_4.png',
-      color: 'text-global-7',
-      bgColor: 'bg-global-6'
-    },
-    {
-      id: 5,
-      type: 'Unauthorised Access',
-      icon: '/images/img_bxs_door_open.svg',
-      camera: 'Shop Floor Camera A',
-      time: '14:35 - 14:37 on 7-Jul-2025',
-      image: '/images/img_screenshot_2025_07_10_4.png',
-      color: 'text-global-7',
-      bgColor: 'bg-global-6'
+
+  // Helper function to get incident icon
+  const renderIncidentIcon = (type) => {
+    switch(type) {
+      case 'Unauthorised Access':
+        return <img src="/images/img_bxs_door_open.svg" alt="" className="w-3 h-3" />;
+      case 'Gun Threat':
+        return <img src="/images/img_mdi_gun.svg" alt="" className="w-3 h-3" />;
+      case 'Face Recognised':
+        return <img src="/images/img_search_white_a700.svg" alt="" className="w-3 h-3" />;
+      default:
+        return <img src="/images/img_lucide_icons_alertcircle.svg" alt="" className="w-3 h-3" />;
     }
-  ];
-  const cameraList = [
-    { id: 1, name: 'Camera - 01', active: true },
-    { id: 2, name: 'Camera - 02', active: false },
-    { id: 3, name: 'Camera - 03', active: false }
-  ];
-  const timelineMarkers = [
-    '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', 
-    '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
-    '14:00', '15:00', '16:00'
-  ];
-  const timelineEvents = [
-    { type: 'Unauthorised Access', time: '14:45', color: 'bg-global-7' },
-    { type: 'Face Recognised', time: '14:45', color: 'bg-global-4' },
-    { type: 'Multiple Events', time: '', color: 'bg-button-2' },
-    { type: 'Gun Threat', time: '', color: 'bg-global-7' }
-  ];
+  };
+
+  // Helper function to get incident color class
+  const getIncidentColor = (type) => {
+    switch(type) {
+      case 'Unauthorised Access':
+        return 'text-global-7';
+      case 'Gun Threat':
+        return 'text-button-3';
+      case 'Face Recognised':
+        return 'text-global-4';
+      default:
+        return 'text-global-9';
+    }
+  };
+
+  // Helper function to get incident icon container class
+  const getIncidentIcon = (type) => {
+    switch(type) {
+      case 'Unauthorised Access':
+        return 'bg-global-6 rounded-full p-0.5';
+      case 'Gun Threat':
+        return 'bg-global-7 rounded-full p-0.5';
+      case 'Face Recognised':
+        return 'bg-global-4 rounded-full p-0.5';
+      default:
+        return 'bg-global-9 rounded-full p-0.5';
+    }
+  };
+
+  // Get selected camera name for display
+  const getSelectedCameraName = () => {
+    try {
+      if (!selectedCamera) return 'Select Camera';
+      const camera = cameras.find(cam => cam && cam.id === selectedCamera);
+      return camera && typeof camera === 'object' ? String(camera.name || 'Unnamed Camera') : 'Select Camera';
+    } catch (error) {
+      console.error('Error getting camera name:', error);
+      return 'Select Camera';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#151515_0%,#000000_100%)] flex flex-col">
       <Header />
@@ -126,17 +240,26 @@ const Dashboard = () => {
                 <div className="absolute bottom-0 left-0 right-0 bg-[linear-gradient(180deg,#00000000_0%,#00000066_100%)] p-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                     {/* Camera label */}
-                    <Button
-                      size="sm"
-                      className="bg-global-2 text-global-4 border border-[#404040] px-4 py-1 text-sm font-inter"
-                      leftImage={{
-                        src: "/images/img_lucide_icons_disc.svg",
-                        width: 12,
-                        height: 12
-                      }}
-                    >
-                      Camera - 01
-                    </Button>
+                    {cameras.length > 0 ? (
+                      cameras.map((camera) => (
+                        <Button
+                          key={camera.id}
+                          variant={selectedCamera === camera.id ? 'primary' : 'secondary'}
+                          size="sm"
+                          className="bg-global-2 text-global-4 border border-[#404040] px-4 py-1 text-sm font-inter"
+                          leftImage={{
+                            src: "/images/img_lucide_icons_disc.svg",
+                            width: 12,
+                            height: 12
+                          }}
+                          onClick={() => setSelectedCamera(camera.id)}
+                        >
+                          {camera.name}
+                        </Button>
+                      ))
+                    ) : (
+                      <div className="text-global-4 text-sm">Loading cameras...</div>
+                    )}
                     {/* Camera thumbnails */}
                     <div className="flex gap-3">
                       <div className="flex flex-col items-center">
@@ -204,7 +327,7 @@ const Dashboard = () => {
                         height: 12
                       }}
                     >
-                      4 resolved incidents
+                      {getSelectedCameraName()}
                     </Button>
                   </div>
                 </div>
@@ -213,14 +336,31 @@ const Dashboard = () => {
                   {incidents.map((incident) => (
                     <div key={incident.id} className="flex items-center gap-4 p-3 hover:bg-global-2 rounded-lg transition-colors">
                       <img 
-                        src={incident.image} 
-                        alt={incident.type} 
-                        className="w-[120px] h-[66px] rounded border border-[#ffffff3f] flex-shrink-0"
+                        src="/images/img_screenshot_2025_07_10.png" 
+                        alt={incident.type}
+                        className="w-[120px] h-[66px] rounded border border-[#ffffff3f] flex-shrink-0 object-cover"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-3">
-                          <img src={incident.icon} alt="" className="w-4 h-4" />
-                          <span className={`text-sm font-bold ${incident.color} font-inter`}>
+                          <img 
+                            src={
+                              incident.type === 'Unauthorised Access' ? 
+                                "/images/img_lucide_icons_door_open.svg" :
+                              incident.type === 'Gun Threat' ?
+                                "/images/img_ri_alert_fill.svg" :
+                              incident.type === 'Face Recognised' ?
+                                "/images/img_search_white_a700.svg" :
+                                "/images/img_ri_alert_fill.svg"
+                            } 
+                            alt="" 
+                            className="w-4 h-4" 
+                          />
+                          <span className={`text-sm font-bold ${
+                            incident.type === 'Unauthorised Access' ? 'text-global-7' :
+                            incident.type === 'Gun Threat' ? 'text-button-3' :
+                            incident.type === 'Face Recognised' ? 'text-global-4' :
+                            'text-global-9'
+                          } font-inter`}>
                             {incident.type}
                           </span>
                         </div>
@@ -228,13 +368,20 @@ const Dashboard = () => {
                           <div className="flex items-center gap-2">
                             <img src="/images/img_vector.svg" alt="" className="w-2.5 h-2.5" />
                             <span className="text-xs text-global-9 font-inter">
-                              {incident.camera}
+                              {incident.camera?.name || 'Unknown Camera'}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <img src="/images/img_search_white_a700.svg" alt="" className="w-2 h-2" />
                             <span className="text-xs font-bold text-global-9 font-inter">
-                              {incident.time}
+                              {new Date(incident.t_start).toLocaleString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              })}
                             </span>
                           </div>
                         </div>
@@ -293,10 +440,10 @@ const Dashboard = () => {
                 </h3>
               </div>
               <div className="divide-y divide-gray-700">
-                {cameraList.map((camera) => (
+                {cameras.map((camera) => (
                   <button
                     key={camera.id}
-                    onClick={() => setSelectedCamera(camera.name)}
+                    onClick={() => setSelectedCamera(camera.id)}
                     className={`w-full flex items-center gap-3 p-4 text-left hover:bg-global-5 transition-colors ${
                       camera.active ? 'bg-global-5' : ''
                     }`}

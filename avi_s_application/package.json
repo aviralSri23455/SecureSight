@@ -2,36 +2,6 @@
   "name": "avi_s_application",
   "version": "0.1.0",
   "private": true,
-  "rocketCritical": {
-    "dependencies": [
-      "next",
-      "react",
-      "react-dom",
-      "prop-types",
-      "@dhiwise/component-tagger",
-      "@tailwindcss/typography",
-      "recharts"
-    ],
-    "devDependencies": [
-      "eslint-config-next",
-      "tailwindcss",
-      "autoprefixer",
-      "postcss",
-      "eslint",
-      "prettier",
-      "@netlify/plugin-nextjs"
-    ],
-    "scripts": [
-      "dev",
-      "build",
-      "start",
-      "lint",
-      "lint:fix",
-      "format",
-      "serve"
-    ],
-    "warning": "🚨 CRITICAL: DO NOT REMOVE OR MODIFY ABOVE DEPENDENCIES - Required for Next.js app functionality"
-  },
   "scripts": {
     "dev": "next dev -p 4028",
     "build": "next build",
@@ -40,7 +10,7 @@
     "serve": "next start"
   },
   "dependencies": {
-    "@dhiwise/component-tagger": "^1.0.10",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.52.0",
     "@tailwindcss/typography": "^0.5.16",
     "date-fns": "^4.1.0",
@@ -52,7 +22,6 @@
     "recharts": "^2.15.2"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^5.11.1",
     "autoprefixer": "10.4.2",
     "postcss": "8.4.8",
     "prettier": "^3.5.3",
