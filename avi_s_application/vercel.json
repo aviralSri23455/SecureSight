@@ -1,8 +1,0 @@
-{
-  "version": 2,
-  "buildCommand": "cd avi_s_application && npm run build",
-  "outputDirectory": "avi_s_application/.next",
-  "framework": "nextjs",
-  "installCommand": "cd avi_s_application && npm install",
-  "rootDirectory": "avi_s_application"
-}

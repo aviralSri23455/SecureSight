@@ -7,43 +7,67 @@ export const dynamic = 'force-dynamic';
 export async function PATCH(request, { params }) {
   try {
     const { id } = params;
+    console.log('Attempting to resolve incident ID:', id);
 
-    // First get the current resolved status
+    // First, get the current incident to verify it exists
     const { data: currentIncident, error: fetchError } = await supabase
       .from('incidents')
       .select('resolved')
       .eq('id', id)
       .single();
 
-    if (fetchError) {
-      console.error('Error fetching incident:', fetchError);
+    if (fetchError || !currentIncident) {
+      console.error('Error fetching incident:', fetchError || 'Incident not found');
       return NextResponse.json(
         { error: 'Incident not found' },
         { status: 404 }
       );
     }
 
-    // Toggle the resolved status
-    const { data, error } = await supabase
+    console.log('Current incident status - resolved:', currentIncident.resolved);
+    
+    // First, update the incident status
+    const { error: updateError } = await supabase
       .from('incidents')
-      .update({ resolved: !currentIncident.resolved })
-      .eq('id', id)
-      .select('*, camera:cameras(*)')
-      .single();
+      .update({ 
+        resolved: !currentIncident.resolved
+      })
+      .eq('id', id);
 
-    if (error) {
-      console.error('Error updating incident:', error);
+    if (updateError) {
+      console.error('Error updating incident:', updateError);
       return NextResponse.json(
-        { error: 'Failed to update incident' },
+        { error: `Failed to update incident: ${updateError.message}` },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(data);
+    // Then fetch the updated incident with camera data
+    const { data: updatedIncident, error: fetchUpdatedError } = await supabase
+      .from('incidents')
+      .select('*, camera:cameras(*)')
+      .eq('id', id)
+      .single();
+
+    if (fetchUpdatedError) {
+      console.error('Error fetching updated incident:', fetchUpdatedError);
+      return NextResponse.json(
+        { 
+          success: true, 
+          message: 'Incident status updated, but could not fetch updated details',
+          resolved: !currentIncident.resolved
+        },
+        { status: 200 }
+      );
+    }
+
+    console.log('Successfully updated incident:', updatedIncident);
+    return NextResponse.json(updatedIncident);
+    
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Unexpected error in PATCH /api/incidents/[id]/resolve:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${error.message}` },
       { status: 500 }
     );
   }

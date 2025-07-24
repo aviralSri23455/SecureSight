@@ -1,6 +1,7 @@
-# SecureWatch Pro - Backend Setup
+# SecureSight - Backend Setup
 
-This document provides instructions for setting up and using the SecureSight. SecureSight is a CCTV monitoring software where you can connect upto 3 CCTV feeds — computer vision models help detect certain activity on the feeds (e.g. unauthorised access, gun threats, etc). backend.
+
+- This document provides instructions for setting up and using the SecureSight. SecureSight is a CCTV monitoring software where you can connect upto 3 CCTV feeds — computer vision models help detect certain activity on the feeds (e.g. unauthorised access, gun threats, etc) 
 
 ## Prerequisites
 
@@ -138,9 +139,9 @@ fetch('http://localhost:4028/api/incidents/20/resolve', {
   method: 'PATCH',
   headers: { 'Content-Type': 'application/json' }
 })
-  .then(response => response.json())
-  .then(data => console.log('Success:', data))
-  .catch(error => console.error('Error:', error));
+.then(response => response.json())
+.then(data => console.log('Response:', data))
+.catch(error => console.error('Error:', error));
 ```
 
 **Expected Response:**
@@ -158,6 +159,42 @@ fetch('http://localhost:4028/api/incidents/20/resolve', {
   }
 }
 ```
+# Testing End Point In Coonsle
+
+- **First, let's test fetching all incidents**
+```javascript
+fetch('http://localhost:4028/api/incidents')
+  .then(response => response.json())
+  .then(data => console.log('All incidents:', data.length > 0 ? '✅ Data received' : '❌ No data'))
+  .catch(error => console.error('Error:', error));
+```
+- **Then, let's test toggling an incident's resolved status (use a valid incident ID from your data)**
+
+```javascript
+fetch('http://localhost:4028/api/incidents/20/resolve', {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' }
+})
+.then(response => response.json())
+.then(data => console.log('Update response:', data))
+.catch(error => console.error('Error:', error));
+```
+- **Finally, let's check if we can get a specific incident**
+
+```javascript
+fetch('http://localhost:4028/api/incidents/20')
+  .then(response => response.json())
+  .then(data => console.log('Incident details:', data))
+  .catch(error => console.error('Error:', error));
+```
+- If all these endpoints return data without errors, your backend is working correctly
+
+## Output Screen Shot 
+![Alt text](./Screen%20Shot%20Images/Backend%20Output%20Screen%20Shot.PNG)
+
+![Alt text](./Screen%20Shot%20Images/Backend%20Screen%20Shot%20-2.PNG)
+
+
 
 ## Development
 
