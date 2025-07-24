@@ -12,9 +12,13 @@ const nextConfig = {
     ];
   },
   webpack(config) {
-
     return config;
   },
+  // Disable static optimization for API routes
+  experimental: {
+    serverComponentsExternalPackages: ['@supabase/supabase-js'],
+  },
+  // API configuration removed as it's not valid in Next.js 14
 };
 
 export default nextConfig;

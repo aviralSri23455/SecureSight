@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export const dynamic = 'force-dynamic'; // Ensure this route is dynamic
-export const revalidate = 0; // Prevent static generation
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
+    // Use static searchParams method instead of accessing request.url directly
+    const searchParams = request.nextUrl.searchParams;
     const resolved = searchParams.get('resolved');
 
     let query = supabase
