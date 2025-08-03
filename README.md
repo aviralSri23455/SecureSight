@@ -61,7 +61,7 @@
 
 ## 🔄 Real-time Functionality
 
-SecureWatch Pro leverages Supabase Realtime to provide instant updates across all connected clients. The system is designed to handle high-frequency updates with minimal latency.
+SecureSight leverages Supabase Realtime to provide instant updates across all connected clients. The system is designed to handle high-frequency updates with minimal latency.
 
 ### How Real-time Updates Work
 
